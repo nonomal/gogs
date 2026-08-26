@@ -1,18 +1,14 @@
-// Copyright 2019 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package context
 
 import (
 	"os"
 	"path/filepath"
 
-	"github.com/unknwon/com"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/markup"
+	"gogs.io/gogs/internal/osx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -20,7 +16,7 @@ import (
 // on all pages.
 func (c *Context) renderNoticeBanner() {
 	fpath := filepath.Join(conf.CustomDir(), "notice", "banner.md")
-	if !com.IsExist(fpath) {
+	if !osx.Exist(fpath) {
 		return
 	}
 

@@ -1,6 +1,5 @@
 "use strict";
 
-var csrf;
 var suburl;
 
 function initCommentPreviewTab($form) {
@@ -13,7 +12,6 @@ function initCommentPreviewTab($form) {
       $.post(
         $this.data("url"),
         {
-          _csrf: csrf,
           mode: "gfm",
           context: $this.data("context"),
           text: $form
@@ -53,7 +51,6 @@ function initEditPreviewTab($form) {
       $.post(
         $this.data("url"),
         {
-          _csrf: csrf,
           context: $this.data("context"),
           text: $form
             .find(
@@ -86,7 +83,6 @@ function initEditDiffTab($form) {
       $.post(
         $this.data("url"),
         {
-          _csrf: csrf,
           content: $form
             .find(
               '.tab.segment[data-tab="' + $tabMenu.data("write") + '"] textarea'
@@ -128,7 +124,6 @@ function initCommentForm() {
 
   function updateIssueMeta(url, action, id) {
     $.post(url, {
-      _csrf: csrf,
       action: action,
       id: id
     });
@@ -240,29 +235,19 @@ function initCommentForm() {
       }
       switch (input_id) {
         case "#milestone_id":
-          $list
-            .find(".selected")
-            .html(
-              '<a class="item" href=' +
-                $(this).data("href") +
-                ">" +
-                $(this).text() +
-                "</a>"
-            );
+          var $milestoneAnchor = $('<a class="item"></a>');
+          $milestoneAnchor.attr("href", $(this).data("href"));
+          $milestoneAnchor.text($(this).text());
+          $list.find(".selected").empty().append($milestoneAnchor);
           break;
         case "#assignee_id":
-          $list
-            .find(".selected")
-            .html(
-              '<a class="item" href=' +
-                $(this).data("href") +
-                ">" +
-                '<img class="ui avatar image" src=' +
-                $(this).data("avatar") +
-                ">" +
-                $(this).text() +
-                "</a>"
-            );
+          var $assigneeAnchor = $('<a class="item"></a>');
+          $assigneeAnchor.attr("href", $(this).data("href"));
+          $assigneeAnchor.append(
+            $('<img class="ui avatar image">').attr("src", $(this).data("avatar"))
+          );
+          $assigneeAnchor.append($("<span></span>").text($(this).text()));
+          $list.find(".selected").empty().append($assigneeAnchor);
       }
       $(".ui" + select_id + ".list .no-select").addClass("hide");
       $(input_id).val($(this).data("id"));
@@ -451,7 +436,6 @@ function initRepository() {
         $.post(
           $(this).data("update-url"),
           {
-            _csrf: csrf,
             title: $editInput.val()
           },
           function(data) {
@@ -510,7 +494,6 @@ function initRepository() {
           $.post(
             $editContentZone.data("update-url"),
             {
-              _csrf: csrf,
               content: $textarea.val(),
               context: $editContentZone.data("context")
             },
@@ -546,7 +529,6 @@ function initRepository() {
       var $this = $(this);
       if (confirm($this.data("locale"))) {
         $.post($this.data("url"), {
-          _csrf: csrf
         }).done(function() {
           $("#" + $this.data("comment-id")).remove();
         });
@@ -651,7 +633,6 @@ function initWikiForm() {
           $.post(
             $editArea.data("url"),
             {
-              _csrf: csrf,
               mode: "gfm",
               context: $editArea.data("context"),
               text: plainText
@@ -755,7 +736,6 @@ function setSimpleMDE($editArea) {
         $.post(
           $editArea.data("url"),
           {
-            _csrf: csrf,
             mode: "gfm",
             context: $editArea.data("context"),
             text: plainText
@@ -1143,7 +1123,6 @@ function initAdmin() {
         }
       });
       $.post($this.data("link"), {
-        _csrf: csrf,
         ids: ids
       }).done(function() {
         window.location.href = $this.data("redirect");
@@ -1367,7 +1346,6 @@ function initRepositoryCollaboration() {
   $(".access-mode.menu .item").click(function() {
     var $menu = $(this).parent();
     $.post($menu.data("url"), {
-      _csrf: csrf,
       uid: $menu.data("uid"),
       mode: $(this).data("value")
     });
@@ -1402,7 +1380,6 @@ function initWebhookSettings() {
     var $this = $(this);
     $this.addClass("loading disabled");
     $.post($this.data("link"), {
-      _csrf: csrf
     }).done(
       setTimeout(function() {
         window.location.href = $this.data("redirect");
@@ -1412,7 +1389,6 @@ function initWebhookSettings() {
 }
 
 $(document).ready(function() {
-  csrf = $("meta[name=_csrf]").attr("content");
   suburl = $("meta[name=_suburl]").attr("content");
 
   // Set cursor to the end of autofocus input string
@@ -1471,7 +1447,6 @@ $(document).ready(function() {
     var filenameDict = {};
     $dropzone.dropzone({
       url: $dropzone.data("upload-url"),
-      headers: { "X-CSRF-Token": csrf },
       maxFiles: $dropzone.data("max-file"),
       maxFilesize: $dropzone.data("max-size"),
       timeout: 0,
@@ -1494,10 +1469,9 @@ $(document).ready(function() {
           if (file.name in filenameDict) {
             $("#" + filenameDict[file.name]).remove();
           }
-          if ($dropzone.data("remove-url") && $dropzone.data("csrf")) {
+          if ($dropzone.data("remove-url")) {
             $.post($dropzone.data("remove-url"), {
-              file: filenameDict[file.name],
-              _csrf: $dropzone.data("csrf")
+              file: filenameDict[file.name]
             });
           }
         });
@@ -1588,7 +1562,6 @@ $(document).ready(function() {
           }
 
           $.post($this.data("url"), {
-            _csrf: csrf,
             id: $this.data("id")
           }).done(function(data) {
             window.location.href = data.redirect;
@@ -1607,7 +1580,6 @@ $(document).ready(function() {
   $(".delete-post.button").click(function() {
     var $this = $(this);
     $.post($this.data("request-url"), {
-      _csrf: csrf
     }).done(function() {
       window.location.href = $this.data("done-url");
     });
@@ -1615,6 +1587,23 @@ $(document).ready(function() {
   // To make arbitrary form element to behave like a submit button
   $(".submit-button").click(function() {
     $($(this).data("form")).submit();
+  });
+
+  // Intercept the legacy sign-out form so it talks to the JSON API and
+  // navigates to the URL the server hands back (honors CustomLogoutURL).
+  $("#logout-form").on("submit", function(event) {
+    event.preventDefault();
+    var $form = $(this);
+    var doneUrl = $form.data("done-url");
+    $.ajax({
+      url: $form.attr("action"),
+      method: "POST"
+    }).done(function(data) {
+      var target = (data && data.redirectTo) ? data.redirectTo : doneUrl;
+      window.location.assign(target);
+    }).fail(function() {
+      window.location.assign(doneUrl);
+    });
   });
 
   // Check or select on option to enable/disable target region

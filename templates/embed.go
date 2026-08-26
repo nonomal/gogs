@@ -1,25 +1,21 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package templates
 
 import (
 	"bytes"
 	"embed"
-	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/osutil"
+	"gogs.io/gogs/internal/osx"
 )
 
-//go:embed *.tmpl **/*
+//go:embed **/*
 var files embed.FS
 
 // fileSystem implements the macaron.TemplateFileSystem interface.
@@ -37,12 +33,15 @@ func (fs *fileSystem) Get(name string) (io.Reader, error) {
 			return bytes.NewReader(fs.files[i].Data()), nil
 		}
 	}
-	return nil, fmt.Errorf("file %q not found", name)
+	return nil, errors.Newf("file %q not found", name)
 }
 
 func mustNames(fsys fs.FS) []string {
 	var names []string
 	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
 		if !d.IsDir() {
 			names = append(names, path)
 		}
@@ -52,6 +51,24 @@ func mustNames(fsys fs.FS) []string {
 		panic("assetNames failure: " + err.Error())
 	}
 	return names
+}
+
+// MailFileNames returns the embedded template file paths under "mail/",
+// each relative to the "mail" directory (e.g. "auth/activate.tmpl").
+func MailFileNames() []string {
+	var names []string
+	for _, name := range mustNames(files) {
+		if rel, ok := strings.CutPrefix(name, "mail/"); ok {
+			names = append(names, rel)
+		}
+	}
+	return names
+}
+
+// ReadMailFile returns the embedded mail template bytes at the given path
+// relative to the "mail" directory.
+func ReadMailFile(name string) ([]byte, error) {
+	return files.ReadFile(path.Join("mail", name))
 }
 
 // NewTemplateFileSystem returns a macaron.TemplateFileSystem instance for embedded assets.
@@ -72,7 +89,7 @@ func NewTemplateFileSystem(dir, customDir string) macaron.TemplateFileSystem {
 		// Check if corresponding custom file exists
 		var data []byte
 		fpath := path.Join(customDir, name)
-		if osutil.IsFile(fpath) {
+		if osx.IsFile(fpath) {
 			data, err = os.ReadFile(fpath)
 		} else {
 			data, err = files.ReadFile(name)

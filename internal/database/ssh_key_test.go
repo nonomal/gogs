@@ -1,38 +1,20 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
-	"gogs.io/gogs/internal/conf"
+	"github.com/stretchr/testify/require"
 )
 
-func Test_SSHParsePublicKey(t *testing.T) {
-	// TODO: Refactor SSHKeyGenParsePublicKey to accept a tempPath and remove this init.
-	conf.MustInit("")
+func TestSSHParsePublicKey(t *testing.T) {
+	tempPath := t.TempDir()
 	tests := []struct {
 		name      string
 		content   string
 		expType   string
 		expLength int
 	}{
-		{
-			name:      "dsa-1024",
-			content:   "ssh-dss AAAAB3NzaC1kc3MAAACBAOChCC7lf6Uo9n7BmZ6M8St19PZf4Tn59NriyboW2x/DZuYAz3ibZ2OkQ3S0SqDIa0HXSEJ1zaExQdmbO+Ux/wsytWZmCczWOVsaszBZSl90q8UnWlSH6P+/YA+RWJm5SFtuV9PtGIhyZgoNuz5kBQ7K139wuQsecdKktISwTakzAAAAFQCzKsO2JhNKlL+wwwLGOcLffoAmkwAAAIBpK7/3xvduajLBD/9vASqBQIHrgK2J+wiQnIb/Wzy0UsVmvfn8A+udRbBo+csM8xrSnlnlJnjkJS3qiM5g+eTwsLIV1IdKPEwmwB+VcP53Cw6lSyWyJcvhFb0N6s08NZysLzvj0N+ZC/FnhKTLzIyMtkHf/IrPCwlM+pV/M/96YgAAAIEAqQcGn9CKgzgPaguIZooTAOQdvBLMI5y0bQjOW6734XOpqQGf/Kra90wpoasLKZjSYKNPjE+FRUOrStLrxcNs4BeVKhy2PYTRnybfYVk1/dmKgH6P1YSRONsGKvTsH6c5IyCRG0ncCgYeF8tXppyd642982daopE7zQ/NPAnJfag= nocomment",
-			expType:   "dsa",
-			expLength: 1024,
-		},
-		{
-			name:      "rsa-1024",
-			content:   "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDAu7tvIvX6ZHrRXuZNfkR3XLHSsuCK9Zn3X58lxBcQzuo5xZgB6vRwwm/QtJuF+zZPtY5hsQILBLmF+BZ5WpKZp1jBeSjH2G7lxet9kbcH+kIVj0tPFEoyKI9wvWqIwC4prx/WVk2wLTJjzBAhyNxfEq7C9CeiX9pQEbEqJfkKCQ== nocomment",
-			expType:   "rsa",
-			expLength: 1024,
-		},
 		{
 			name:      "rsa-2048",
 			content:   "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDMZXh+1OBUwSH9D45wTaxErQIN9IoC9xl7MKJkqvTvv6O5RR9YW/IK9FbfjXgXsppYGhsCZo1hFOOsXHMnfOORqu/xMDx4yPuyvKpw4LePEcg4TDipaDFuxbWOqc/BUZRZcXu41QAWfDLrInwsltWZHSeG7hjhpacl4FrVv9V1pS6Oc5Q1NxxEzTzuNLS/8diZrTm/YAQQ/+B+mzWI3zEtF4miZjjAljWd1LTBPvU23d29DcBmmFahcZ441XZsTeAwGxG/Q6j8NgNXj9WxMeWwxXV2jeAX/EBSpZrCVlCQ1yJswT6xCp8TuBnTiGWYMBNTbOZvPC4e0WI2/yZW/s5F nocomment",
@@ -57,20 +39,22 @@ func Test_SSHParsePublicKey(t *testing.T) {
 			expType:   "ecdsa",
 			expLength: 521,
 		},
+		{
+			name:      "ed25519-256",
+			content:   "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICGYutovQfTewtcodVN1E1UUzMk4GQfiRI5ZoP/kTlDb nocomment",
+			expType:   "ed25519",
+			expLength: 256,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			typ, length, err := SSHNativeParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
+			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 
-			typ, length, err = SSHKeyGenParsePublicKey(test.content)
-			if err != nil {
-				t.Fatal(err)
-			}
+			typ, length, err = SSHKeygenParsePublicKey(test.content, tempPath, "ssh-keygen")
+			require.NoError(t, err)
 			assert.Equal(t, test.expType, typ)
 			assert.Equal(t, test.expLength, length)
 		})

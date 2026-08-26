@@ -1,16 +1,12 @@
-// Copyright 2022 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 	"gorm.io/gorm"
 
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // OrganizationsStore is the storage layer for organizations.
@@ -46,9 +42,9 @@ func (s *OrganizationsStore) List(ctx context.Context, opts ListOrgsOptions) ([]
 		ORDER BY org.id ASC
 	*/
 	tx := s.db.WithContext(ctx).
-		Joins(dbutil.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
+		Joins(dbx.Quote("JOIN org_user ON org_user.org_id = %s.id", "user")).
 		Where("org_user.uid = ?", opts.MemberID).
-		Order(dbutil.Quote("%s.id ASC", "user"))
+		Order(dbx.Quote("%s.id ASC", "user"))
 	if !opts.IncludePrivateMembers {
 		tx = tx.Where("org_user.is_public = ?", true)
 	}

@@ -1,16 +1,11 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package admin
 
 import (
+	"encoding/json"
 	"fmt"
 	"runtime"
 	"strings"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -221,7 +216,7 @@ func Config(c *context.Context) {
 			Mode: strings.Title(conf.Log.Modes[i]),
 		}
 
-		result, _ := jsoniter.MarshalIndent(conf.Log.Configs[i], "", "  ")
+		result, _ := json.MarshalIndent(conf.Log.Configs[i], "", "  ")
 		loggers[i].Config = string(result)
 	}
 	c.Data["Loggers"] = loggers

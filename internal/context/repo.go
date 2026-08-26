@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package context
 
 import (
@@ -10,15 +6,15 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/cockroachdb/errors"
 	"github.com/editorconfig/editorconfig-core-go/v2"
-	"github.com/pkg/errors"
 	"gopkg.in/macaron.v1"
 
 	"github.com/gogs/git-module"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/repoutil"
+	"gogs.io/gogs/internal/repox"
 )
 
 type PullRequest struct {
@@ -44,7 +40,7 @@ type Repository struct {
 	TreePath     string
 	CommitID     string
 	RepoLink     string
-	CloneLink    repoutil.CloneLink
+	CloneLink    repox.CloneLink
 	CommitsCount int64
 	Mirror       *database.Mirror
 
@@ -182,17 +178,16 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 		// If the authenticated user has no direct access, see if the repository is a fork
 		// and whether the user has access to the base repository.
 		if c.Repo.AccessMode == database.AccessModeNone && repo.BaseRepo != nil {
-			mode := database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
-				database.AccessModeOptions{
-					OwnerID: repo.BaseRepo.OwnerID,
-					Private: repo.BaseRepo.IsPrivate,
-				},
+			mode := min(
+				// Users shouldn't have indirect access level higher than write.
+				database.Handle.Permissions().AccessMode(c.Req.Context(), c.UserID(), repo.BaseRepo.ID,
+					database.AccessModeOptions{
+						OwnerID: repo.BaseRepo.OwnerID,
+						Private: repo.BaseRepo.IsPrivate,
+					},
+				),
+				database.AccessModeWrite,
 			)
-
-			// Users shouldn't have indirect access level higher than write.
-			if mode > database.AccessModeWrite {
-				mode = database.AccessModeWrite
-			}
 			c.Repo.AccessMode = mode
 		}
 
@@ -266,7 +261,7 @@ func RepoAssignment(pages ...bool) macaron.Handler {
 
 		if c.IsLogged {
 			c.Data["IsWatchingRepo"] = database.IsWatching(c.User.ID, repo.ID)
-			c.Data["IsStaringRepo"] = database.IsStaring(c.User.ID, repo.ID)
+			c.Data["IsStaringRepo"] = database.IsStarring(c.User.ID, repo.ID)
 		}
 
 		// repo is bare and display enable

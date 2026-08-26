@@ -1,5 +1,4 @@
 // Copyright 2013 The Beego Authors. All rights reserved.
-// Copyright 2014 The Gogs Authors. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -24,7 +23,11 @@ import (
 )
 
 var (
-	defaultSetting   = Settings{false, "GogsServer", 60 * time.Second, 60 * time.Second, nil, nil, nil, false}
+	defaultSetting = Settings{
+		UserAgent:        "GogsServer",
+		ConnectTimeout:   60 * time.Second,
+		ReadWriteTimeout: 60 * time.Second,
+	}
 	defaultCookieJar http.CookieJar
 	settingMutex     sync.Mutex
 )
@@ -96,6 +99,7 @@ type Settings struct {
 	Proxy            func(*http.Request) (*url.URL, error)
 	Transport        http.RoundTripper
 	EnableCookie     bool
+	CheckRedirect    func(req *http.Request, via []*http.Request) error
 }
 
 // Request provides more useful methods for requesting a URL than http.Request.
@@ -149,6 +153,13 @@ func (r *Request) SetTimeout(connectTimeout, readWriteTimeout time.Duration) *Re
 // SetTLSClientConfig sets tls connection configurations if visiting https url.
 func (r *Request) SetTLSClientConfig(config *tls.Config) *Request {
 	r.setting.TLSClientConfig = config
+	return r
+}
+
+// SetCheckRedirect sets the policy invoked by the underlying HTTP client before
+// following a redirect. See http.Client.CheckRedirect for semantics.
+func (r *Request) SetCheckRedirect(fn func(req *http.Request, via []*http.Request) error) *Request {
+	r.setting.CheckRedirect = fn
 	return r
 }
 
@@ -331,8 +342,9 @@ func (r *Request) getResponse() (*http.Response, error) {
 	}
 
 	client := &http.Client{
-		Transport: trans,
-		Jar:       jar,
+		Transport:     trans,
+		Jar:           jar,
+		CheckRedirect: r.setting.CheckRedirect,
 	}
 
 	if len(r.setting.UserAgent) > 0 && r.req.Header.Get("User-Agent") == "" {

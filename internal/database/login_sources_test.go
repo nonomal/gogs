@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -9,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	mockrequire "github.com/derision-test/go-mockgen/testutil/require"
+	mockrequire "github.com/derision-test/go-mockgen/v2/testutil/require"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -19,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/auth/ldap"
 	"gogs.io/gogs/internal/auth/pam"
 	"gogs.io/gogs/internal/auth/smtp"
-	"gogs.io/gogs/internal/errutil"
+	"gogs.io/gogs/internal/errx"
 )
 
 func TestLoginSource_BeforeSave(t *testing.T) {
@@ -215,7 +211,7 @@ func loginSourcesCreate(t *testing.T, ctx context.Context, s *LoginSourcesStore)
 
 	// Try to create second login source with same name should fail.
 	_, err = s.Create(ctx, CreateLoginSourceOptions{Name: source.Name})
-	wantErr := ErrLoginSourceAlreadyExist{args: errutil.Args{"name": source.Name}}
+	wantErr := ErrLoginSourceAlreadyExist{args: errx.Args{"name": source.Name}}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -274,13 +270,13 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 
 		// Delete the login source will result in error
 		err = s.DeleteByID(ctx, source.ID)
-		wantErr := ErrLoginSourceInUse{args: errutil.Args{"id": source.ID}}
+		wantErr := ErrLoginSourceInUse{args: errx.Args{"id": source.ID}}
 		assert.Equal(t, wantErr, err)
 	})
 
 	mock := NewMockLoginSourceFilesStore()
 	mock.GetByIDFunc.SetDefaultHook(func(id int64) (*LoginSource, error) {
-		return nil, ErrLoginSourceNotExist{args: errutil.Args{"id": id}}
+		return nil, ErrLoginSourceNotExist{args: errx.Args{"id": id}}
 	})
 	setMockLoginSourceFilesStore(t, s, mock)
 
@@ -312,7 +308,7 @@ func loginSourcesDeleteByID(t *testing.T, ctx context.Context, s *LoginSourcesSt
 
 	// We should get token not found error
 	_, err = s.GetByID(ctx, source.ID)
-	wantErr := ErrLoginSourceNotExist{args: errutil.Args{"id": source.ID}}
+	wantErr := ErrLoginSourceNotExist{args: errx.Args{"id": source.ID}}
 	assert.Equal(t, wantErr, err)
 }
 
@@ -320,7 +316,7 @@ func loginSourcesGetByID(t *testing.T, ctx context.Context, s *LoginSourcesStore
 	mock := NewMockLoginSourceFilesStore()
 	mock.GetByIDFunc.SetDefaultHook(func(id int64) (*LoginSource, error) {
 		if id != 101 {
-			return nil, ErrLoginSourceNotExist{args: errutil.Args{"id": id}}
+			return nil, ErrLoginSourceNotExist{args: errx.Args{"id": id}}
 		}
 		return &LoginSource{ID: id}, nil
 	})

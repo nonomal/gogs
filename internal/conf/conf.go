@@ -1,11 +1,7 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
-	"fmt"
+	"net"
 	"net/mail"
 	"net/url"
 	"os"
@@ -14,20 +10,27 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/go-macaron/cache/memcache"
+	"github.com/cockroachdb/errors"
+	"github.com/fatih/color"
 	_ "github.com/go-macaron/cache/redis"
 	_ "github.com/go-macaron/session/redis"
 	"github.com/gogs/go-libravatar"
-	"github.com/pkg/errors"
 	"gopkg.in/ini.v1"
 	log "unknwon.dev/clog/v2"
 
 	"gogs.io/gogs/conf"
-	"gogs.io/gogs/internal/osutil"
-	"gogs.io/gogs/internal/semverutil"
+	"gogs.io/gogs/internal/osx"
+	"gogs.io/gogs/internal/semverx"
 )
 
 func init() {
+	// fatih/color disables ANSI codes when stdout is not a TTY, which is the
+	// case under process managers like moon. Honor TTY_FORCE so callers can
+	// opt back in without a real terminal.
+	if os.Getenv("TTY_FORCE") != "" {
+		color.NoColor = false
+	}
+
 	// Initialize the primary logger until logging service is up.
 	err := log.NewConsole()
 	if err != nil {
@@ -71,12 +74,12 @@ func Init(customConf string) error {
 	}
 	CustomConf = customConf
 
-	if osutil.IsFile(customConf) {
+	if osx.IsFile(customConf) {
 		if err = File.Append(customConf); err != nil {
 			return errors.Wrapf(err, "append %q", customConf)
 		}
-	} else {
-		log.Warn("Custom config %q not found. Ignore this warning if you're running for the first time", customConf)
+	} else if !HookMode {
+		return errors.Newf("custom config %q not found: see https://gogs.io/getting-started/installation#configuration for first-time setup", customConf)
 	}
 
 	if err = File.Section(ini.DefaultSection).MapTo(&App); err != nil {
@@ -91,6 +94,12 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [server] section")
 	}
 	Server.AppDataPath = ensureAbs(Server.AppDataPath)
+	if Server.CertFile != "" {
+		Server.CertFile = ensureAbs(Server.CertFile)
+	}
+	if Server.KeyFile != "" {
+		Server.KeyFile = ensureAbs(Server.KeyFile)
+	}
 
 	if !strings.HasSuffix(Server.ExternalURL, "/") {
 		Server.ExternalURL += "/"
@@ -108,8 +117,8 @@ func Init(customConf string) error {
 	if err != nil {
 		return errors.Wrapf(err, "parse '[server] UNIX_SOCKET_PERMISSION' %q", Server.UnixSocketPermission)
 	}
-	if unixSocketMode > 0777 {
-		unixSocketMode = 0666
+	if unixSocketMode > 0o777 {
+		unixSocketMode = 0o666
 	}
 	Server.UnixSocketMode = os.FileMode(unixSocketMode)
 
@@ -127,9 +136,9 @@ func Init(customConf string) error {
 
 	if !SSH.Disabled {
 		if !SSH.StartBuiltinServer {
-			if err := os.MkdirAll(SSH.RootPath, 0700); err != nil {
+			if err := os.MkdirAll(SSH.RootPath, 0o700); err != nil {
 				return errors.Wrap(err, "create SSH root directory")
-			} else if err = os.MkdirAll(SSH.KeyTestPath, 0644); err != nil {
+			} else if err = os.MkdirAll(SSH.KeyTestPath, 0o644); err != nil {
 				return errors.Wrap(err, "create SSH key test directory")
 			}
 		} else {
@@ -146,10 +155,12 @@ func Init(customConf string) error {
 				return errors.Wrap(err, "get OpenSSH version")
 			}
 
-			if IsWindowsRuntime() || semverutil.Compare(sshVersion, "<", "5.1") {
-				log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
+			if IsWindowsRuntime() || semverx.Compare(sshVersion, "<", "5.1") {
+				if !HookMode {
+					log.Warn(`SSH minimum key size check is forced to be disabled because server is not eligible:
 	1. Windows server
 	2. OpenSSH version is lower than 5.1`)
+				}
 			} else {
 				SSH.MinimumKeySizes = map[string]int{}
 				for _, key := range File.Section("ssh.minimum_key_sizes").Keys() {
@@ -189,12 +200,13 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [security] section")
 	}
 
-	// Check run user when the install is locked.
-	if Security.InstallLock {
-		currentUser, match := CheckRunUser(App.RunUser)
-		if !match {
-			return fmt.Errorf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
-		}
+	if Security.SecretKey == "" || Security.SecretKey == "CHANGE-ME-OR-FAIL-TO-START" {
+		return errors.New("[security] SECRET_KEY must be set to a strong, unguessable value")
+	}
+
+	currentUser, match := CheckRunUser(App.RunUser)
+	if !match {
+		return errors.Newf("user configured to run Gogs is %q, but the current user is %q", App.RunUser, currentUser)
 	}
 
 	// **************************
@@ -203,6 +215,12 @@ func Init(customConf string) error {
 
 	if err = File.Section("email").MapTo(&Email); err != nil {
 		return errors.Wrap(err, "mapping [email] section")
+	}
+	if Email.CertFile != "" {
+		Email.CertFile = ensureAbs(Email.CertFile)
+	}
+	if Email.KeyFile != "" {
+		Email.KeyFile = ensureAbs(Email.KeyFile)
 	}
 
 	if Email.Enabled {
@@ -224,6 +242,26 @@ func Init(customConf string) error {
 	if err = File.Section("auth").MapTo(&Auth); err != nil {
 		return errors.Wrap(err, "mapping [auth] section")
 	}
+	// Reset before re-parsing so repeated Init calls (e.g. via the web installer)
+	// do not carry over CIDRs from a previous configuration.
+	Auth.TrustedProxyCIDRs = nil
+	for _, raw := range Auth.TrustedProxyIPs {
+		// Allow bare IPs as a convenience by promoting them to single-host CIDRs.
+		if !strings.Contains(raw, "/") {
+			if ip := net.ParseIP(raw); ip != nil {
+				if ip.To4() != nil {
+					raw += "/32"
+				} else {
+					raw += "/128"
+				}
+			}
+		}
+		_, cidr, err := net.ParseCIDR(raw)
+		if err != nil {
+			return errors.Wrapf(err, "parse trusted proxy CIDR %q", raw)
+		}
+		Auth.TrustedProxyCIDRs = append(Auth.TrustedProxyCIDRs, cidr)
+	}
 
 	// *************************
 	// ----- User settings -----
@@ -239,6 +277,9 @@ func Init(customConf string) error {
 
 	if err = File.Section("session").MapTo(&Session); err != nil {
 		return errors.Wrap(err, "mapping [session] section")
+	}
+	if Session.Provider == "file" {
+		Session.ProviderConfig = ensureAbs(Session.ProviderConfig)
 	}
 
 	// *******************************
@@ -349,8 +390,14 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [lfs] section")
 	}
 	LFS.ObjectsPath = ensureAbs(LFS.ObjectsPath)
+	LFS.ObjectsTempPath = ensureAbs(LFS.ObjectsTempPath)
 
 	handleDeprecated()
+	if !HookMode {
+		for _, warning := range checkInvalidOptions(File) {
+			log.Warn("%s", warning)
+		}
+	}
 
 	if err = File.Section("cache").MapTo(&Cache); err != nil {
 		return errors.Wrap(err, "mapping [cache] section")
@@ -380,14 +427,6 @@ func Init(customConf string) error {
 		return errors.Wrap(err, "mapping [other] section")
 	}
 
-	HasRobotsTxt = osutil.IsFile(filepath.Join(CustomDir(), "robots.txt"))
+	HasRobotsTxt = osx.IsFile(filepath.Join(CustomDir(), "robots.txt"))
 	return nil
-}
-
-// MustInit panics if configuration initialization failed.
-func MustInit(customConf string) {
-	err := Init(customConf)
-	if err != nil {
-		panic(err)
-	}
 }

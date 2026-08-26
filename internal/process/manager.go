@@ -1,17 +1,13 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package process
 
 import (
 	"bytes"
-	"errors"
-	"fmt"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
 
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 )
 
@@ -76,6 +72,13 @@ func Remove(pid int64) bool {
 
 // Exec starts executing a shell command in given path, it tracks corresponding process and timeout.
 func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(timeout, dir, nil, desc, cmdName, args...)
+}
+
+// ExecDirEnv is the same as ExecDir but allows appending additional environment
+// variables to the child process. Pass nil for env to inherit the parent
+// process environment unchanged.
+func ExecDirEnv(timeout time.Duration, dir string, env []string, desc, cmdName string, args ...string) (string, string, error) {
 	if timeout == -1 {
 		timeout = defaultTimeout
 	}
@@ -87,6 +90,9 @@ func ExecDir(timeout time.Duration, dir, desc, cmdName string, args ...string) (
 	cmd.Dir = dir
 	cmd.Stdout = bufOut
 	cmd.Stderr = bufErr
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 	if err := cmd.Start(); err != nil {
 		return "", err.Error(), err
 	}
@@ -117,6 +123,13 @@ func ExecTimeout(timeout time.Duration, desc, cmdName string, args ...string) (s
 	return ExecDir(timeout, "", desc, cmdName, args...)
 }
 
+// ExecTimeoutEnv is the same as ExecTimeout but allows appending additional
+// environment variables to the child process. Pass nil for env to inherit the
+// parent process environment unchanged.
+func ExecTimeoutEnv(timeout time.Duration, env []string, desc, cmdName string, args ...string) (string, string, error) {
+	return ExecDirEnv(timeout, "", env, desc, cmdName, args...)
+}
+
 // Exec starts executing a shell command, it tracks corresponding its process and use default timeout.
 func Exec(desc, cmdName string, args ...string) (string, string, error) {
 	return ExecDir(-1, "", desc, cmdName, args...)
@@ -129,7 +142,7 @@ func Kill(pid int64) error {
 			if proc.Cmd != nil && proc.Cmd.Process != nil &&
 				proc.Cmd.ProcessState != nil && !proc.Cmd.ProcessState.Exited() {
 				if err := proc.Cmd.Process.Kill(); err != nil {
-					return fmt.Errorf("fail to kill process [pid: %d, desc: %s]: %v", proc.PID, proc.Description, err)
+					return errors.Newf("fail to kill process [pid: %d, desc: %s]: %v", proc.PID, proc.Description, err)
 				}
 			}
 			Remove(pid)

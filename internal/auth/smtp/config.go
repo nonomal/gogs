@@ -1,16 +1,19 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package smtp
 
 import (
 	"crypto/tls"
-	"fmt"
+	"net"
 	"net/smtp"
+	"strconv"
+	"time"
 
-	"github.com/pkg/errors"
+	"github.com/cockroachdb/errors"
 )
+
+// dialTimeout bounds how long the SMTP authentication flow waits on the
+// underlying TCP connect. Without it, an unreachable or misspelled host hangs
+// the sign-in request until the OS-level connect timeout (minutes).
+const dialTimeout = 10 * time.Second
 
 // Config contains configuration for SMTP authentication.
 //
@@ -25,8 +28,14 @@ type Config struct {
 }
 
 func (c *Config) doAuth(auth smtp.Auth) error {
-	client, err := smtp.Dial(fmt.Sprintf("%s:%d", c.Host, c.Port))
+	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+	conn, err := net.DialTimeout("tcp", addr, dialTimeout)
 	if err != nil {
+		return err
+	}
+	client, err := smtp.NewClient(conn, c.Host)
+	if err != nil {
+		_ = conn.Close()
 		return err
 	}
 	defer client.Close()

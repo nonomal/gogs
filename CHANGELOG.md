@@ -2,22 +2,121 @@
 
 All notable changes to Gogs are documented in this file.
 
-## 0.14.0+dev (`main`)
-
-### Added
-
-- Support using TLS for Redis session provider using `[session] PROVIDER_CONFIG = ...,tls=true`. [#7860](https://github.com/gogs/gogs/pull/7860)
+## 0.15.0+dev (`main`)
 
 ### Changed
 
-- The required Go version to compile source code changed to 1.24.
-- The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
-- Updated Mermaid JS to 11.9.0. [#8009](https://github.com/gogs/gogs/pull/8009)
+- Docker builds from `main` are now published only as `gogs/gogs:edge`, using the next-generation `Dockerfile.next`. The legacy `Dockerfile` no longer produces `main` builds. The `gogs/gogs:latest` and `gogs/gogs:next-latest` tags now always point to the highest published stable release, never to a back-patch on an older line. [#8278](https://github.com/gogs/gogs/pull/8278)
+- Self-registration is now disabled by default. New instances must set `[auth] DISABLE_REGISTRATION = false` to allow sign-ups. [#8350](https://github.com/gogs/gogs/pull/8350)
 
 ### Fixed
 
+- _Security:_ On Windows hosts, an authenticated user with write access could write files into a repository's `.git` directory through a crafted tree path. [#8408](https://github.com/gogs/gogs/pull/8408) - [GHSA-85m5-cfw6-3cx8](https://github.com/gogs/gogs/security/advisories/GHSA-85m5-cfw6-3cx8)
+- _Security:_ Open redirect on the `/redirect` endpoint and post-action flows via a backslash in the redirect target. [#8391](https://github.com/gogs/gogs/pull/8391) - [GHSA-3g28-2vwg-gxq6](https://github.com/gogs/gogs/security/advisories/GHSA-3g28-2vwg-gxq6)
+- _Security:_ Argument injection through a crafted commit or branch reference on several repository API endpoints allowed an authenticated user with read access to leak internal server details to the error logs. [#8393](https://github.com/gogs/gogs/pull/8393) - [GHSA-mxrh-2rxr-6mqc](https://github.com/gogs/gogs/security/advisories/GHSA-mxrh-2rxr-6mqc)
+- _Security:_ Argument injection through a crafted branch name when creating a pull request allowed an authenticated user with write access to write files to arbitrary paths on the server. [#8390](https://github.com/gogs/gogs/pull/8390) - [GHSA-2grc-qr7q-6m36](https://github.com/gogs/gogs/security/advisories/GHSA-2grc-qr7q-6m36)
+- _Security:_ The "remember me" auto-login cookie was derived from database columns, so an attacker with a database dump could forge a valid cookie for any user. The auto-login cookie path has been removed entirely. Persistence is now provided by the server-issued session cookie. [#8289](https://github.com/gogs/gogs/pull/8289) - [GHSA-4pph-25p3-pw73](https://github.com/gogs/gogs/security/advisories/GHSA-4pph-25p3-pw73)
+
+### Removed
+
+- The web-based first-time install page at `/install`, along with the `[security] INSTALL_LOCK` configuration option. A working `custom/conf/app.ini` is now always required. [#8350](https://github.com/gogs/gogs/pull/8350)
+- Support for customizing pages with Go template files stops being possible.
+- Support for MSSQL as the database backend. [#8173](https://github.com/gogs/gogs/pull/8173)
+- Support for `memcache` as the cache adapter. [#8270](https://github.com/gogs/gogs/pull/8270)
+- The `gogs cert` subcommand. [#8153](https://github.com/gogs/gogs/pull/8153)
+- The `[email] DISABLE_HELO` configuration option. HELO/EHLO is now always sent during SMTP handshake. [#8164](https://github.com/gogs/gogs/pull/8164)
+- The `/debug`, `/debug/pprof/*`, `/debug/profile/*`, and `/urlmap.json` endpoints. [#8271](https://github.com/gogs/gogs/pull/8271)
+- CSRF protection and the `[session] CSRF_COOKIE_NAME` configuration option. [#8300](https://github.com/gogs/gogs/pull/8300)
+- Support for DSA public keys. The `DSA` entry under `[ssh.minimum_key_sizes]` is no longer recognized. [#8313](https://github.com/gogs/gogs/pull/8313)
+
+## 0.14.3
+
+### Fixed
+
+- _Security:_ Reverse proxy authentication header was honored from any remote address, allowing user impersonation when Gogs was reachable directly. The header is now only trusted from addresses listed in `[auth] TRUSTED_PROXY_IPS`. [#8264](https://github.com/gogs/gogs/pull/8264) - [GHSA-w6j9-vw59-27wv](https://github.com/gogs/gogs/security/advisories/GHSA-w6j9-vw59-27wv)
+- _Security:_ Server-side request forgery in webhook deliveries via HTTP redirects to local network addresses. [#8263](https://github.com/gogs/gogs/pull/8263) - [GHSA-c4v7-xg93-qf8g](https://github.com/gogs/gogs/security/advisories/GHSA-c4v7-xg93-qf8g)
+- _Security:_ Denial of service when rendering issue references against a malformed external issue tracker URL format. [#8312](https://github.com/gogs/gogs/pull/8312) - [GHSA-4j89-2c4f-44c6](https://github.com/gogs/gogs/security/advisories/GHSA-4j89-2c4f-44c6)
+- _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through Markdown links with `javascript:` URLs. [#8319](https://github.com/gogs/gogs/pull/8319) - [GHSA-jq8v-rmf6-65jw](https://github.com/gogs/gogs/security/advisories/GHSA-jq8v-rmf6-65jw)
+- _Security:_ Missing authorization check on the attachment download endpoint allowed anyone who knew (or guessed) an attachment UUID to download files belonging to private repositories. [#8320](https://github.com/gogs/gogs/pull/8320) - [GHSA-p9f5-h3rx-j5qw](https://github.com/gogs/gogs/security/advisories/GHSA-p9f5-h3rx-j5qw)
+- _Security:_ Organization team and member management actions accepted GET requests, allowing a logged-in owner to be tricked into adding an attacker to the Owners team via a crafted link. [#8321](https://github.com/gogs/gogs/pull/8321) - [GHSA-pwx3-qcgw-vh7h](https://github.com/gogs/gogs/security/advisories/GHSA-pwx3-qcgw-vh7h)
+- _Security:_ SSRF via mirror address update bypassing clone address validation. [#8225](https://github.com/gogs/gogs/pull/8225) - [GHSA-wv27-2vqp-j7g5](https://github.com/gogs/gogs/security/advisories/GHSA-wv27-2vqp-j7g5)
+- _Security:_ Open redirect on login and other post-action flows via the `redirect_to` query parameter. [#8322](https://github.com/gogs/gogs/pull/8322) - [GHSA-xxhq-69mf-w8cr](https://github.com/gogs/gogs/security/advisories/GHSA-xxhq-69mf-w8cr)
+- _Security:_ Privilege escalation to repository owner via collaboration access mode update. [#8227](https://github.com/gogs/gogs/pull/8227) - [GHSA-4565-r4x7-hg8j](https://github.com/gogs/gogs/security/advisories/GHSA-4565-r4x7-hg8j)
+- _Security:_ SSRF in repository migration and recurring mirror sync via HTTP redirects and stale host validation on stored mirror URLs. [#8324](https://github.com/gogs/gogs/pull/8324) - [GHSA-g2f5-gjr4-qjvm](https://github.com/gogs/gogs/security/advisories/GHSA-g2f5-gjr4-qjvm)
+- _Security:_ Remote command execution via pull request rebase merges with crafted branch names. [#8301](https://github.com/gogs/gogs/pull/8301) - [GHSA-qf6p-p7ww-cwr9](https://github.com/gogs/gogs/security/advisories/GHSA-qf6p-p7ww-cwr9)
+- _Security:_ Stored XSS in the milestone dropdown on the new issue page via crafted milestone names. [#8325](https://github.com/gogs/gogs/pull/8325) - [GHSA-vcm5-gvmp-78mp](https://github.com/gogs/gogs/security/advisories/GHSA-vcm5-gvmp-78mp)
+- _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through `data:text/html` URIs that bypassed the sanitizer. [#8326](https://github.com/gogs/gogs/pull/8326) - [GHSA-3w28-36p9-w929](https://github.com/gogs/gogs/security/advisories/GHSA-3w28-36p9-w929)
+- _Security:_ Write-level collaborators could change admin-only repository settings (issue tracker, wiki, mirror sync) via API. [#8327](https://github.com/gogs/gogs/pull/8327) - [GHSA-268j-37xf-pp52](https://github.com/gogs/gogs/security/advisories/GHSA-268j-37xf-pp52)
+- _Security:_ Password reset tokens stayed valid for the account-activation lifetime, ignoring `[auth] RESET_PASSWORD_CODE_LIVES`. [#8328](https://github.com/gogs/gogs/pull/8328) - [GHSA-5c3f-6486-3g7g](https://github.com/gogs/gogs/security/advisories/GHSA-5c3f-6486-3g7g)
+- _Security:_ Stored XSS in Jupyter notebook (`.ipynb`) preview through raw HTML in markdown cells. [#8330](https://github.com/gogs/gogs/pull/8330) - [GHSA-6vxv-wg6j-5qwp](https://github.com/gogs/gogs/security/advisories/GHSA-6vxv-wg6j-5qwp)
+- _Security:_ Read-only Git HTTP access could be confused with write access during repository pushes. [#8331](https://github.com/gogs/gogs/pull/8331) - [GHSA-wmfg-5p4h-5fw3](https://github.com/gogs/gogs/security/advisories/GHSA-wmfg-5p4h-5fw3)
+- _Security:_ Arbitrary file write outside the repository working tree via crafted upload filename routed through a committed directory symlink. [#8332](https://github.com/gogs/gogs/pull/8332) - [GHSA-89mr-xqfv-758m](https://github.com/gogs/gogs/security/advisories/GHSA-89mr-xqfv-758m)
+- _Security:_ Cross-repository disclosure of Git LFS object contents by binding a known OID to another repository without proving possession of the bytes. [#8333](https://github.com/gogs/gogs/pull/8333) - [GHSA-6p9m-q3jp-47h4](https://github.com/gogs/gogs/security/advisories/GHSA-6p9m-q3jp-47h4)
+- _Security:_ Remote code execution via path traversal in organization names accepted through the API. [#8334](https://github.com/gogs/gogs/pull/8334) - [GHSA-c39w-43gm-34h5](https://github.com/gogs/gogs/security/advisories/GHSA-c39w-43gm-34h5)
+- _Security:_ Stalled SSH handshakes pinned a file descriptor and goroutine indefinitely. The built-in SSH server now drops connections that do not complete the handshake within 15 seconds. [#8335](https://github.com/gogs/gogs/pull/8335) - [GHSA-xp79-5mx3-jx52](https://github.com/gogs/gogs/security/advisories/GHSA-xp79-5mx3-jx52)
+- _Security:_ Organization metadata and team list endpoints were reachable without authentication. [#8336](https://github.com/gogs/gogs/pull/8336) - [GHSA-744x-3838-5r56](https://github.com/gogs/gogs/security/advisories/GHSA-744x-3838-5r56)
+
+## 0.14.2
+
+### Fixed
+
+- _Security:_ Denial of service in repository and wiki file listing pages via crafted file names. [#8116](https://github.com/gogs/gogs/pull/8116) - [GHSA-3qq3-668m-v9mj](https://github.com/gogs/gogs/security/advisories/GHSA-3qq3-668m-v9mj)
+- _Security:_ Cross-repository LFS object overwrite via missing content hash verification. [#8166](https://github.com/gogs/gogs/pull/8166) - [GHSA-gmf8-978x-2fg2](https://github.com/gogs/gogs/security/advisories/GHSA-gmf8-978x-2fg2)
+- _Security:_ Stored XSS via data URI in issue comments. [#8174](https://github.com/gogs/gogs/pull/8174) - [GHSA-xrcr-gmf5-2r8j](https://github.com/gogs/gogs/security/advisories/GHSA-xrcr-gmf5-2r8j)
+- _Security:_ Release tag option injection in release deletion. [#8175](https://github.com/gogs/gogs/pull/8175) - [GHSA-v9vm-r24h-6rqm](https://github.com/gogs/gogs/security/advisories/GHSA-v9vm-r24h-6rqm)
+- _Security:_ Stored XSS in branch and wiki views through author and committer names. [#8176](https://github.com/gogs/gogs/pull/8176) - [GHSA-vgvf-m4fw-938j](https://github.com/gogs/gogs/security/advisories/GHSA-vgvf-m4fw-938j)
+- _Security:_ DOM-based XSS via issue meta selection on the issue page. [#8178](https://github.com/gogs/gogs/pull/8178) - [GHSA-vgjm-2cpf-4g7c](https://github.com/gogs/gogs/security/advisories/GHSA-vgjm-2cpf-4g7c)
+- Unable to update files via web editor and API. [#8184](https://github.com/gogs/gogs/pull/8184)
+
+### Removed
+
+- Support for passing API access tokens via URL query parameters (`token`, `access_token`). Use the `Authorization` header instead. [#8177](https://github.com/gogs/gogs/pull/8177) - [GHSA-x9p5-w45c-7ffc](https://github.com/gogs/gogs/security/advisories/GHSA-x9p5-w45c-7ffc)
+
+## 0.14.1
+
+### Added
+
+- Support comparing tags in addition to branches. [#6141](https://github.com/gogs/gogs/issues/6141)
+- Show file name in browser tab title when viewing files. [#5896](https://github.com/gogs/gogs/pull/5896)
+- Support using TLS for Redis session provider using `[session] PROVIDER_CONFIG = ...,tls=true`. [#7860](https://github.com/gogs/gogs/pull/7860)
+- Support expanading values in `app.ini` from environment variables, e.g. `[database] PASSWORD = ${DATABASE_PASSWORD}`. [#8057](https://github.com/gogs/gogs/pull/8057)
+- Support custom logout URL that users get redirected to after sign out using `[auth] CUSTOM_LOGOUT_URL`. [#8089](https://github.com/gogs/gogs/pull/8089)
+- Start publishing next-generation, security-focused Docker image via `gogs/gogs:next-latest`, which will become the default image distribution (`gogs/gogs:latest`) starting 0.16.0. While not all container options support have been added in the next-generation image, the use of current legacy Docker image is deprecated, it will be published as `gogs/gogs:legacy-latest` starting 0.16.0, and be completely removed no earlier than 0.17.0. [#8061](https://github.com/gogs/gogs/pull/8061)
+
+### Changed
+
+- The required Go version to compile source code changed to 1.25.
+- The build tag `cert` has been removed, and the `gogs cert` subcommand is now always available. [#7883](https://github.com/gogs/gogs/pull/7883)
+- Switched to pure-Go SQLite driver, CGO is no longer required to compile Gogs. [#7882](https://github.com/gogs/gogs/issues/7882)
+- Updated Mermaid JS to 11.9.0. [#8009](https://github.com/gogs/gogs/pull/8009)
+- Halt the repository creation and leave the directory untouched if the repository root already exists. [#8091](https://github.com/gogs/gogs/pull/8091)
+
+### Fixed
+
+- _Security:_ Unauthenticated file upload. [#8128](https://github.com/gogs/gogs/pull/8128) - [GHSA-fc3h-92p8-h36f](https://github.com/gogs/gogs/security/advisories/GHSA-fc3h-92p8-h36f)
+- _Security:_ Protected branch bypass in web UI. [#8124](https://github.com/gogs/gogs/pull/8124) - [GHSA-2c6v-8r3v-gh6p](https://github.com/gogs/gogs/security/advisories/GHSA-2c6v-8r3v-gh6p)
+- _Security:_ Authorization bypass allows cross-repository label modification. [#8123](https://github.com/gogs/gogs/pull/8123) - [GHSA-cv22-72px-f4gh](https://github.com/gogs/gogs/security/advisories/GHSA-cv22-72px-f4gh)
+- _Security:_ Cross-repository comment deletion. [#8119](https://github.com/gogs/gogs/pull/8119) - [GHSA-jj5m-h57j-5gv7](https://github.com/gogs/gogs/security/advisories/GHSA-jj5m-h57j-5gv7)
+- 500 error on repository watchers and stargazers pages when using MSSQL. [#5482](https://github.com/gogs/gogs/issues/5482)
 - Submodules using `ssh://` protocol and a port number are not rendered correctly. [#4941](https://github.com/gogs/gogs/issues/4941)
 - Missing link to user profile on the first commit in commits history page. [#7404](https://github.com/gogs/gogs/issues/7404)
+- Unable to delete or display files with special characters in their names. [#7596](https://github.com/gogs/gogs/issues/7596)
+- Docker healthcheck fails when `HTTP_PROXY` or `HTTPS_PROXY` environment variables are set. [#7529](https://github.com/gogs/gogs/issues/7529)
+
+## 0.13.4
+
+### Fixed
+
+- _Security:_ DoS in repository mirror sync. [#8065](https://github.com/gogs/gogs/pull/8065) - [GHSA-cr88-6mqm-4g57](https://github.com/gogs/gogs/security/advisories/GHSA-cr88-6mqm-4g57)
+- _Security:_ RCE in repository put contents API. [#8082](https://github.com/gogs/gogs/pull/8082) - [GHSA-gg64-xxr9-qhjp](https://github.com/gogs/gogs/security/advisories/GHSA-gg64-xxr9-qhjp)
+- _Security:_ Arbitrary file deletion via path traversal in wiki page update. [#8099](https://github.com/gogs/gogs/pull/8099) - [GHSA-jp7c-wj6q-3qf2](https://github.com/gogs/gogs/security/advisories/GHSA-jp7c-wj6q-3qf2)
+- _Security:_ 2FA bypass via recovery code. [#8100](https://github.com/gogs/gogs/pull/8100) - [GHSA-p6x6-9mx6-26wj](https://github.com/gogs/gogs/security/advisories/GHSA-p6x6-9mx6-26wj)
+- _Security:_ Authorization bypass in repository deletion API. [#8101](https://github.com/gogs/gogs/pull/8101) - [GHSA-rjv5-9px2-fqw6](https://github.com/gogs/gogs/security/advisories/GHSA-rjv5-9px2-fqw6)
+- _Security:_ Update repository content via API with read-only permission. [#8102](https://github.com/gogs/gogs/pull/8102) - [GHSA-5qhx-gwfj-6jqr](https://github.com/gogs/gogs/security/advisories/GHSA-5qhx-gwfj-6jqr)
+- _Security:_ Arbitrary file read/write via path traversal in Git hook editing. [#8103](https://github.com/gogs/gogs/pull/8103) - [GHSA-mrph-w4hh-gx3g](https://github.com/gogs/gogs/security/advisories/GHSA-mrph-w4hh-gx3g)
+- _Security:_ Stored XSS via Mermaid diagrams. [`2c88cd4`](https://github.com/gogs/gogs/commit/2c88cd4d9fdc346d8e06d82f5368d657c10e79c2) - [GHSA-26gq-grmh-6xm6](https://github.com/gogs/gogs/security/advisories/GHSA-26gq-grmh-6xm6)
+- Route `GET /api/v1/user/repos` responses 500 when accessible repositories contain forks. [#8069](https://github.com/gogs/gogs/pull/8069)
+- Newer Git versions that uses default branch `main` cause wiki initialization to fail. [#8094](https://github.com/gogs/gogs/pull/8094)
 
 ## 0.13.3
 

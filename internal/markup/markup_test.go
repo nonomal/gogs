@@ -1,7 +1,3 @@
-// Copyright 2017 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package markup_test
 
 import (
@@ -149,6 +145,20 @@ func Test_RenderIssueIndexPattern(t *testing.T) {
 					assert.Equal(t, test.expVal, string(RenderIssueIndexPattern([]byte(test.input), urlPrefix, metas)))
 				})
 			}
+		})
+
+		t.Run("malformed format does not panic", func(t *testing.T) {
+			// An external tracker format with an unclosed "{" must not crash the
+			// rendering pipeline. See GHSA-4j89-2c4f-44c6.
+			metas := map[string]string{
+				"format": "https://someurl.com/{user}/{repo}/{",
+				"user":   "someuser",
+				"repo":   "somerepo",
+				"style":  IssueNameStyleNumeric,
+			}
+			assert.NotPanics(t, func() {
+				RenderIssueIndexPattern([]byte("#1 test"), urlPrefix, metas)
+			})
 		})
 
 		t.Run("alphanumeric style", func(t *testing.T) {

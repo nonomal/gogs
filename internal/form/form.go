@@ -1,7 +1,3 @@
-// Copyright 2017 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package form
 
 import (
@@ -45,7 +41,7 @@ func Assign(form any, data map[string]any) {
 	typ := reflect.TypeOf(form)
 	val := reflect.ValueOf(form)
 
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 		val = val.Elem()
 	}
@@ -66,7 +62,7 @@ func Assign(form any, data map[string]any) {
 }
 
 func getRuleBody(field reflect.StructField, prefix string) string {
-	for _, rule := range strings.Split(field.Tag.Get("binding"), ";") {
+	for rule := range strings.SplitSeq(field.Tag.Get("binding"), ";") {
 		if strings.HasPrefix(rule, prefix) {
 			return rule[len(prefix) : len(rule)-1]
 		}
@@ -99,7 +95,7 @@ func validate(errs binding.Errors, data map[string]any, f Form, l macaron.Locale
 	Assign(f, data)
 
 	typ := reflect.TypeOf(f)
-	if typ.Kind() == reflect.Ptr {
+	if typ.Kind() == reflect.Pointer {
 		typ = typ.Elem()
 	}
 

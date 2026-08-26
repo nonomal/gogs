@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -14,7 +10,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/tool"
 )
 
@@ -45,10 +41,7 @@ func renderCommits(c *context.Context, filename string) {
 	c.Data["PageIsCommits"] = true
 	c.Data["FileName"] = filename
 
-	page := c.QueryInt("page")
-	if page < 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 	pageSize := c.QueryInt("pageSize")
 	if pageSize < 1 {
 		pageSize = conf.UI.User.CommitsPagingNum
@@ -118,76 +111,6 @@ func tryGetUserByEmail(ctx gocontext.Context, email string) *database.User {
 	return user
 }
 
-func Diff(c *context.Context) {
-	c.PageIs("Diff")
-	c.RequireHighlightJS()
-
-	userName := c.Repo.Owner.Name
-	repoName := c.Repo.Repository.Name
-	commitID := c.Params(":sha")
-
-	commit, err := c.Repo.GitRepo.CatFileCommit(commitID)
-	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get commit by ID")
-		return
-	}
-
-	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
-		commitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
-		git.DiffOptions{Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
-	)
-	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get diff")
-		return
-	}
-
-	parents := make([]string, commit.ParentsCount())
-	for i := 0; i < commit.ParentsCount(); i++ {
-		sha, err := commit.ParentID(i)
-		if err != nil {
-			c.NotFound()
-			return
-		}
-		parents[i] = sha.String()
-	}
-
-	setEditorconfigIfExists(c)
-	if c.Written() {
-		return
-	}
-
-	c.RawTitle(commit.Summary() + " · " + tool.ShortSHA1(commitID))
-	c.Data["CommitID"] = commitID
-	c.Data["IsSplitStyle"] = c.Query("style") == "split"
-	c.Data["Username"] = userName
-	c.Data["Reponame"] = repoName
-	c.Data["IsImageFile"] = commit.IsImageFile
-	c.Data["IsImageFileByIndex"] = commit.IsImageFileByIndex
-	c.Data["Commit"] = commit
-	c.Data["Author"] = tryGetUserByEmail(c.Req.Context(), commit.Author.Email)
-	c.Data["Diff"] = diff
-	c.Data["Parents"] = parents
-	c.Data["DiffNotAvailable"] = diff.NumFiles() == 0
-	c.Data["SourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", commitID)
-	c.Data["RawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", commitID)
-	if commit.ParentsCount() > 0 {
-		c.Data["BeforeSourcePath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "src", parents[0])
-		c.Data["BeforeRawPath"] = conf.Server.Subpath + "/" + path.Join(userName, repoName, "raw", parents[0])
-	}
-	c.Success(DIFF)
-}
-
-func RawDiff(c *context.Context) {
-	if err := c.Repo.GitRepo.RawDiff(
-		c.Params(":sha"),
-		git.RawDiffFormat(c.Params(":ext")),
-		c.Resp,
-	); err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get raw diff")
-		return
-	}
-}
-
 type userCommit struct {
 	User *database.User
 	*git.Commit
@@ -224,22 +147,22 @@ func CompareDiff(c *context.Context) {
 
 	commit, err := c.Repo.GitRepo.CatFileCommit(afterCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get head commit")
+		c.NotFoundOrError(gitx.NewError(err), "get head commit")
 		return
 	}
 
-	diff, err := gitutil.RepoDiff(c.Repo.GitRepo,
+	diff, err := gitx.RepoDiff(c.Repo.GitRepo,
 		afterCommitID, conf.Git.MaxDiffFiles, conf.Git.MaxDiffLines, conf.Git.MaxDiffLineChars,
 		git.DiffOptions{Base: beforeCommitID, Timeout: time.Duration(conf.Git.Timeout.Diff) * time.Second},
 	)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get diff")
+		c.NotFoundOrError(gitx.NewError(err), "get diff")
 		return
 	}
 
 	commits, err := commit.CommitsAfter(beforeCommitID)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get commits after")
+		c.NotFoundOrError(gitx.NewError(err), "get commits after")
 		return
 	}
 

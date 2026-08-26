@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package app
 
 import (
@@ -9,7 +5,7 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	"gogs.io/gogs/internal/authutil"
+	"gogs.io/gogs/internal/authx"
 	"gogs.io/gogs/internal/conf"
 )
 
@@ -24,7 +20,7 @@ func MetricsFilter() macaron.Handler {
 			return
 		}
 
-		username, password := authutil.DecodeBasic(r.Header)
+		username, password := authx.DecodeBasic(r.Header)
 		if username != conf.Prometheus.BasicAuthUsername || password != conf.Prometheus.BasicAuthPassword {
 			w.WriteHeader(http.StatusForbidden)
 			return

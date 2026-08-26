@@ -1,13 +1,9 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package admin
 
 import (
 	"net/http"
+	"strconv"
 
-	"github.com/unknwon/com"
 	"github.com/unknwon/paginater"
 	log "unknwon.dev/clog/v2"
 
@@ -26,10 +22,7 @@ func Notices(c *context.Context) {
 	c.Data["PageIsAdminNotices"] = true
 
 	total := database.Handle.Notices().Count(c.Req.Context())
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 	c.Data["Page"] = paginater.New(int(total), conf.UI.Admin.NoticePagingNum, page, 5)
 
 	notices, err := database.Handle.Notices().List(c.Req.Context(), page, conf.UI.Admin.NoticePagingNum)
@@ -47,7 +40,7 @@ func DeleteNotices(c *context.Context) {
 	strs := c.QueryStrings("ids[]")
 	ids := make([]int64, 0, len(strs))
 	for i := range strs {
-		id := com.StrTo(strs[i]).MustInt64()
+		id, _ := strconv.ParseInt(strs[i], 10, 64)
 		if id > 0 {
 			ids = append(ids, id)
 		}

@@ -1,8 +1,19 @@
-![gogs-brand](https://user-images.githubusercontent.com/2946214/146899259-6a8b58ad-8d6e-40d2-ab02-79dc6aadabbf.png)
 
-[![GitHub Workflow Status](https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge)](https://github.com/gogs/gogs/actions?query=branch%3Amain) [![Sourcegraph](https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph)](https://sourcegraph.com/github.com/gogs/gogs)
-
-👉 Deploy on DigitalOcean and [get $200 in free credits](https://m.do.co/c/5aeb02268b55)!
+ <p>
+  <div align="center">
+    <img src="docs/images/logo-light.svg#gh-light-mode-only" alt="Gogs">
+    <img src="docs/images/logo-dark.svg#gh-dark-mode-only" alt="Gogs">
+  </div>
+  <div align="center">
+    <a href="https://github.com/gogs/gogs/actions?query=branch%3Amain"><img
+  src="https://img.shields.io/github/checks-status/gogs/gogs/main?logo=github&style=for-the-badge" alt="GitHub Workflow Status"></a>
+    <a href="https://sourcegraph.com/github.com/gogs/gogs"><img
+src="https://img.shields.io/badge/view%20on-Sourcegraph-brightgreen.svg?style=for-the-badge&logo=sourcegraph" alt="Sourcegraph"></a>
+  </div>
+  <div align="center">
+    👉 Deploy on DigitalOcean and <a href="https://m.do.co/c/5aeb02268b55">get $200 in free credits</a>!
+  </div>
+</p>
 
 ## 🔮 Vision
 
@@ -13,10 +24,10 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Please visit [our home page](https://gogs.io) for user documentation.
 - Please refer to [CHANGELOG.md](CHANGELOG.md) for list of changes in each releases.
 - Want to try it before doing anything else? Do it [online](https://try.gogs.io/gogs/gogs)!
-- Having trouble? Help yourself with [troubleshooting](https://gogs.io/docs/intro/troubleshooting.html) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
-- Want to help with localization? Check out the [localization documentation](https://gogs.io/docs/features/i18n.html).
+- Having trouble? Help yourself with [troubleshooting](https://gogs.io/asking/troubleshooting) or ask questions in [Discussions](https://github.com/gogs/gogs/discussions).
+- Want to help with localization? Check out the [localization documentation](https://gogs.io/advancing/localization).
 - Ready to get hands dirty? Read our [contributing guide](.github/CONTRIBUTING.md).
-- Hmm... What about APIs? We have experimental support with [documentation](https://github.com/gogs/docs-api).
+- Hmm... What about APIs? We have experimental support with [documentation](https://gogs.io/api-reference).
 
 ## 💌 Features
 
@@ -31,7 +42,7 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 - Jupyter Notebook and PDF rendering.
 - Authentication via SMTP, LDAP, reverse proxy, GitHub.com and GitHub Enterprise with 2FA.
 - Customize HTML templates, static files and many others.
-- Rich database backend support, including PostgreSQL, MySQL, SQLite3 or any database backend that speaks one of those protocols.
+- Rich database backend support, including PostgreSQL, MySQL, MariaDB, SQLite3 or any database backend that speaks one of those protocols.
 - Have localization over [31 languages](https://crowdin.com/project/gogs).
 
 ## 💾 Hardware requirements
@@ -47,19 +58,11 @@ The Gogs (`/gɑgz/`) project aims to build a simple, stable and extensible self-
 
 ## 📜 Installation
 
-Make sure you install the [prerequisites](https://gogs.io/docs/installation) first.
-
-There are 6 ways to install Gogs:
-
-- [Install from binary](https://gogs.io/docs/installation/install_from_binary.html)
-- [Install from source](https://gogs.io/docs/installation/install_from_source.html)
-- [Install from packages](https://gogs.io/docs/installation/install_from_packages.html)
-- [Ship with Docker](https://github.com/gogs/gogs/tree/main/docker)
-- [Try with Vagrant](https://github.com/geerlingguy/ansible-vagrant-examples/tree/master/gogs)
+Please follow [the guide in our documentation](https://gogs.io/getting-started/installation).
 
 ### Deploy to cloud
 
-- [Cloudron](https://www.cloudron.io/store/io.gogs.cloudronapp.html)
+- [Cloudron](https://www.cloudron.io/store/gogs.html)
 - [YunoHost](https://github.com/YunoHost-Apps/gogs_ynh)
 - [alwaysdata](https://www.alwaysdata.com/en/marketplace/gogs/)
 
@@ -94,7 +97,8 @@ There are 6 ways to install Gogs:
 Other acknowledgments:
 
 - Thanks [Egon Elbre](https://twitter.com/egonelbre) for designing the original version of the logo.
-- Thanks [Crowdin](https://crowdin.com/project/gogs) for sponsoring open source translation plan.
+- Thanks [Mintlify](https://mintlify.com) for sponsoring open source documentation plan.
+- Thanks [Crowdin](https://crowdin.com) for sponsoring open source translation plan.
 - Thanks [Buildkite](https://buildkite.com) for sponsoring open source CI/CD plan.
 
 ## 👋 Contributors

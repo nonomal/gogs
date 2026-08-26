@@ -1,18 +1,18 @@
-.DS_Store
-*.db
-*.log
+# Build artifacts and cache
+.bin/
+dist/
+.moon/cache/
+node_modules/
+.agents/skills/shadcn
+
+# Runtime data
 log/
 custom/
 data/
+
+# Configuration and application files
 .idea/
-*.iml
-public/img/avatar/
-*.exe
-*.exe~
-/gogs
-profile/
-*.pem
-output*
-/release
-.task
 .envrc
+
+# System junk
+.DS_Store

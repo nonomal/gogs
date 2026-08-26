@@ -1,17 +1,9 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package route
 
 import (
 	gocontext "context"
-	"fmt"
-	"net/http"
 
-	"github.com/go-macaron/i18n"
 	"github.com/unknwon/paginater"
-	"gopkg.in/macaron.v1"
 
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
@@ -20,7 +12,6 @@ import (
 )
 
 const (
-	tmplHome                 = "home"
 	tmplExploreRepos         = "explore/repos"
 	tmplExploreUsers         = "explore/users"
 	tmplExploreOrganizations = "explore/organizations"
@@ -29,23 +20,14 @@ const (
 func Home(c *context.Context) {
 	if c.IsLogged {
 		if !c.User.IsActive && conf.Auth.RequireEmailConfirmation {
-			c.Data["Title"] = c.Tr("auth.active_your_account")
-			c.Success(user.TmplUserAuthActivate)
+			c.RedirectSubpath("/user/activate")
 		} else {
 			user.Dashboard(c)
 		}
 		return
 	}
 
-	// Check auto-login.
-	uname := c.GetCookie(conf.Security.CookieUsername)
-	if uname != "" {
-		c.Redirect(conf.Server.Subpath + "/user/login")
-		return
-	}
-
-	c.Data["PageIsHome"] = true
-	c.Success(tmplHome)
+	c.ServeWeb()
 }
 
 func ExploreRepos(c *context.Context) {
@@ -93,10 +75,7 @@ type UserSearchOptions struct {
 }
 
 func RenderUserSearch(c *context.Context, opts *UserSearchOptions) {
-	page := c.QueryInt("page")
-	if page <= 1 {
-		page = 1
-	}
+	page := max(c.QueryInt("page"), 1)
 
 	var (
 		users []*database.User
@@ -163,9 +142,4 @@ func ExploreOrganizations(c *context.Context) {
 		OrderBy:  "updated_unix DESC",
 		TplName:  tmplExploreOrganizations,
 	})
-}
-
-func NotFound(c *macaron.Context, l i18n.Locale) {
-	c.Data["Title"] = l.Tr("status.page_not_found")
-	c.HTML(http.StatusNotFound, fmt.Sprintf("status/%d", http.StatusNotFound))
 }

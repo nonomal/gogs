@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -19,7 +15,7 @@ import (
 	"gogs.io/gogs/internal/conf"
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/gitutil"
+	"gogs.io/gogs/internal/gitx"
 	"gogs.io/gogs/internal/markup"
 	"gogs.io/gogs/internal/template"
 	"gogs.io/gogs/internal/template/highlight"
@@ -36,11 +32,11 @@ const (
 func renderDirectory(c *context.Context, treeLink string) {
 	tree, err := c.Repo.Commit.Subtree(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get subtree")
+		c.NotFoundOrError(gitx.NewError(err), "get subtree")
 		return
 	}
 
-	entries, err := tree.Entries()
+	entries, err := tree.Entries(git.LsTreeOptions{Verbatim: true})
 	if err != nil {
 		c.Error(err, "list entries")
 		return
@@ -129,6 +125,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 		return
 	}
 
+	c.Data["Title"] = blob.Name() + " - " + c.Data["Title"].(string)
 	c.Data["FileSize"] = blob.Size()
 	c.Data["FileName"] = blob.Name()
 	c.Data["HighlightClass"] = highlight.FileNameToHighlightClass(blob.Name())
@@ -184,7 +181,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 			output.Reset()
 			for i := 0; i < len(lines); i++ {
-				output.WriteString(fmt.Sprintf(`<span id="L%d">%d</span>`, i+1, i+1))
+				fmt.Fprintf(&output, `<span id="L%d">%d</span>`, i+1, i+1)
 			}
 			c.Data["LineNums"] = gotemplate.HTML(output.String())
 		}
@@ -218,7 +215,7 @@ func renderFile(c *context.Context, entry *git.TreeEntry, treeLink, rawLink stri
 
 func setEditorconfigIfExists(c *context.Context) {
 	ec, err := c.Repo.Editorconfig()
-	if err != nil && !gitutil.IsErrRevisionNotExist(err) {
+	if err != nil && !gitx.IsErrRevisionNotExist(err) {
 		log.Warn("setEditorconfigIfExists.Editorconfig [repo_id: %d]: %v", c.Repo.Repository.ID, err)
 		return
 	}
@@ -267,7 +264,7 @@ func Home(c *context.Context) {
 	// Get current entry user currently looking at.
 	entry, err := c.Repo.Commit.TreeEntry(c.Repo.TreePath)
 	if err != nil {
-		c.NotFoundOrError(gitutil.NewError(err), "get tree entry")
+		c.NotFoundOrError(gitx.NewError(err), "get tree entry")
 		return
 	}
 

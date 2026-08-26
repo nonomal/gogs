@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package form
 
 import (
@@ -10,82 +6,6 @@ import (
 	"github.com/go-macaron/binding"
 	"gopkg.in/macaron.v1"
 )
-
-//nolint:staticcheck // Reason: needed for legacy code
-type Install struct {
-	DbType   string `binding:"Required"`
-	DbHost   string
-	DbUser   string
-	DbPasswd string
-	DbName   string
-	DbSchema string
-	SSLMode  string
-	DbPath   string
-
-	AppName             string `binding:"Required" locale:"install.app_name"`
-	RepoRootPath        string `binding:"Required"`
-	RunUser             string `binding:"Required"`
-	Domain              string `binding:"Required"`
-	SSHPort             int
-	UseBuiltinSSHServer bool
-	HTTPPort            string `binding:"Required"`
-	AppUrl              string `binding:"Required"`
-	LogRootPath         string `binding:"Required"`
-	EnableConsoleMode   bool
-	DefaultBranch       string
-
-	SMTPHost        string
-	SMTPFrom        string
-	SMTPUser        string `binding:"OmitEmpty;MaxSize(254)" locale:"install.mailer_user"`
-	SMTPPasswd      string
-	RegisterConfirm bool
-	MailNotify      bool
-
-	OfflineMode           bool
-	DisableGravatar       bool
-	EnableFederatedAvatar bool
-	DisableRegistration   bool
-	EnableCaptcha         bool
-	RequireSignInView     bool
-
-	AdminName          string `binding:"OmitEmpty;AlphaDashDot;MaxSize(30)" locale:"install.admin_name"`
-	AdminPasswd        string `binding:"OmitEmpty;MaxSize(255)" locale:"install.admin_password"`
-	AdminConfirmPasswd string
-	AdminEmail         string `binding:"OmitEmpty;MinSize(3);MaxSize(254);Include(@)" locale:"install.admin_email"`
-}
-
-func (f *Install) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-//    _____   ____ _________________ ___
-//   /  _  \ |    |   \__    ___/   |   \
-//  /  /_\  \|    |   / |    | /    ~    \
-// /    |    \    |  /  |    | \    Y    /
-// \____|__  /______/   |____|  \___|_  /
-//         \/                         \/
-
-type Register struct {
-	UserName string `binding:"Required;AlphaDashDot;MaxSize(35)"`
-	Email    string `binding:"Required;Email;MaxSize(254)"`
-	Password string `binding:"Required;MaxSize(255)"`
-	Retype   string
-}
-
-func (f *Register) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
-
-type SignIn struct {
-	UserName    string `binding:"Required;MaxSize(254)"`
-	Password    string `binding:"Required;MaxSize(255)"`
-	LoginSource int64
-	Remember    bool
-}
-
-func (f *SignIn) Validate(ctx *macaron.Context, errs binding.Errors) binding.Errors {
-	return validate(errs, ctx.Data, f, ctx.Locale)
-}
 
 //   __________________________________________.___ _______    ________  _________
 //  /   _____/\_   _____/\__    ___/\__    ___/|   |\      \  /  _____/ /   _____/

@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package dbtest
 
 import (
@@ -17,7 +13,7 @@ import (
 	"gorm.io/gorm/schema"
 
 	"gogs.io/gogs/internal/conf"
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 // NewDB creates a new test database and initializes the given list of tables
@@ -39,7 +35,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 			Password: os.Getenv("MYSQL_PASSWORD"),
 		}
 
-		dsn, err := dbutil.NewDSN(dbOpts)
+		dsn, err := dbx.NewDSN(dbOpts)
 		require.NoError(t, err)
 
 		sqlDB, err := sql.Open("mysql", dsn)
@@ -75,7 +71,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 			SSLMode:  os.Getenv("PGSSLMODE"),
 		}
 
-		dsn, err := dbutil.NewDSN(dbOpts)
+		dsn, err := dbx.NewDSN(dbOpts)
 		require.NoError(t, err)
 
 		sqlDB, err := sql.Open("pgx", dsn)
@@ -100,19 +96,6 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 			_, _ = sqlDB.Exec(fmt.Sprintf(`DROP DATABASE %q`, dbName))
 			_ = sqlDB.Close()
 		}
-	case "sqlite":
-		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
-		dbOpts = conf.DatabaseOpts{
-			Type: "sqlite",
-			Path: dbName,
-		}
-		cleanup = func(db *gorm.DB) {
-			sqlDB, err := db.DB()
-			if err == nil {
-				_ = sqlDB.Close()
-			}
-			_ = os.Remove(dbName)
-		}
 	default:
 		dbName = filepath.Join(os.TempDir(), fmt.Sprintf("gogs-%s-%d.db", suite, time.Now().Unix()))
 		dbOpts = conf.DatabaseOpts{
@@ -129,7 +112,7 @@ func NewDB(t *testing.T, suite string, tables ...any) *gorm.DB {
 	}
 
 	now := time.Now().UTC().Truncate(time.Second)
-	db, err := dbutil.OpenDB(
+	db, err := dbx.OpenDB(
 		dbOpts,
 		&gorm.Config{
 			SkipDefaultTransaction: true,

@@ -1,15 +1,10 @@
-// Copyright 2016 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
-	"fmt"
-
+	"github.com/cockroachdb/errors"
 	log "unknwon.dev/clog/v2"
 
-	api "github.com/gogs/go-gogs-client"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
 )
 
 // Collaboration represent the relation between an individual and a repository.
@@ -75,7 +70,7 @@ func (r *Repository) AddCollaborator(u *User) error {
 	if _, err = sess.Insert(collaboration); err != nil {
 		return err
 	} else if err = r.recalculateAccesses(sess); err != nil {
-		return fmt.Errorf("recalculateAccesses [repo_id: %v]: %v", r.ID, err)
+		return errors.Newf("recalculateAccesses [repo_id: %v]: %v", r.ID, err)
 	}
 
 	return sess.Commit()
@@ -92,10 +87,10 @@ type Collaborator struct {
 	Collaboration *Collaboration
 }
 
-func (c *Collaborator) APIFormat() *api.Collaborator {
-	return &api.Collaborator{
+func (c *Collaborator) APIFormat() *apiv1types.RepositoryCollaborator {
+	return &apiv1types.RepositoryCollaborator{
 		User: c.User.APIFormat(),
-		Permissions: api.Permission{
+		Permissions: apiv1types.RepositoryPermission{
 			Admin: c.Collaboration.Mode >= AccessModeAdmin,
 			Push:  c.Collaboration.Mode >= AccessModeWrite,
 			Pull:  c.Collaboration.Mode >= AccessModeRead,
@@ -106,7 +101,7 @@ func (c *Collaborator) APIFormat() *api.Collaborator {
 func (r *Repository) getCollaborators(e Engine) ([]*Collaborator, error) {
 	collaborations, err := r.getCollaborations(e)
 	if err != nil {
-		return nil, fmt.Errorf("getCollaborations: %v", err)
+		return nil, errors.Newf("getCollaborations: %v", err)
 	}
 
 	collaborators := make([]*Collaborator, len(collaborations))
@@ -129,9 +124,16 @@ func (r *Repository) GetCollaborators() ([]*Collaborator, error) {
 }
 
 // ChangeCollaborationAccessMode sets new access mode for the collaboration.
-func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode) error {
-	// Discard invalid input
-	if mode <= AccessModeNone || mode > AccessModeOwner {
+// The actor's access mode bounds the new mode, so an actor can never grant a
+// level higher than their own.
+func (r *Repository) ChangeCollaborationAccessMode(actorMode AccessMode, userID int64, mode AccessMode) error {
+	// Collaborators can hold at most admin access.
+	if mode <= AccessModeNone || mode > AccessModeAdmin {
+		return nil
+	}
+
+	// Actors must not grant a level above their own.
+	if mode > actorMode {
 		return nil
 	}
 
@@ -141,7 +143,7 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 	}
 	has, err := x.Get(collaboration)
 	if err != nil {
-		return fmt.Errorf("get collaboration: %v", err)
+		return errors.Newf("get collaboration: %v", err)
 	} else if !has {
 		return nil
 	}
@@ -155,7 +157,7 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 	if r.Owner.IsOrganization() {
 		teams, err := GetUserTeams(r.OwnerID, userID)
 		if err != nil {
-			return fmt.Errorf("GetUserTeams: [org_id: %d, user_id: %d]: %v", r.OwnerID, userID, err)
+			return errors.Newf("GetUserTeams: [org_id: %d, user_id: %d]: %v", r.OwnerID, userID, err)
 		}
 		for i := range teams {
 			if mode < teams[i].Authorize {
@@ -171,7 +173,7 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 	}
 
 	if _, err = sess.ID(collaboration.ID).AllCols().Update(collaboration); err != nil {
-		return fmt.Errorf("update collaboration: %v", err)
+		return errors.Newf("update collaboration: %v", err)
 	}
 
 	access := &Access{
@@ -180,7 +182,7 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 	}
 	has, err = sess.Get(access)
 	if err != nil {
-		return fmt.Errorf("get access record: %v", err)
+		return errors.Newf("get access record: %v", err)
 	}
 	if has {
 		_, err = sess.Exec("UPDATE access SET mode = ? WHERE user_id = ? AND repo_id = ?", mode, userID, r.ID)
@@ -189,7 +191,7 @@ func (r *Repository) ChangeCollaborationAccessMode(userID int64, mode AccessMode
 		_, err = sess.Insert(access)
 	}
 	if err != nil {
-		return fmt.Errorf("update/insert access table: %v", err)
+		return errors.Newf("update/insert access table: %v", err)
 	}
 
 	return sess.Commit()

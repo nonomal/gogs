@@ -1,7 +1,3 @@
-// Copyright 2014 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package repo
 
 import (
@@ -10,11 +6,11 @@ import (
 	log "unknwon.dev/clog/v2"
 
 	"github.com/gogs/git-module"
-	api "github.com/gogs/go-gogs-client"
 
 	"gogs.io/gogs/internal/context"
 	"gogs.io/gogs/internal/database"
-	"gogs.io/gogs/internal/tool"
+	apiv1types "gogs.io/gogs/internal/route/api/v1/types"
+	"gogs.io/gogs/internal/urlx"
 )
 
 const (
@@ -113,7 +109,7 @@ func DeleteBranchPost(c *context.Context) {
 
 	defer func() {
 		redirectTo := c.Query("redirect_to")
-		if !tool.IsSameSiteURLPath(redirectTo) {
+		if !urlx.IsSameSite(redirectTo) {
 			redirectTo = c.Repo.RepoLink
 		}
 		c.Redirect(redirectTo)
@@ -122,6 +118,21 @@ func DeleteBranchPost(c *context.Context) {
 	if !c.Repo.GitRepo.HasBranch(branchName) {
 		return
 	}
+	if branchName == c.Repo.Repository.DefaultBranch {
+		c.Flash.Error(c.Tr("repo.branches.default_deletion_not_allowed"))
+		return
+	}
+
+	protectBranch, err := database.GetProtectBranchOfRepoByName(c.Repo.Repository.ID, branchName)
+	if err != nil && !database.IsErrBranchNotExist(err) {
+		log.Error("Failed to get protected branch %q: %v", branchName, err)
+		return
+	}
+	if protectBranch != nil && protectBranch.Protected {
+		c.Flash.Error(c.Tr("repo.branches.protected_deletion_not_allowed"))
+		return
+	}
+
 	if len(commitID) > 0 {
 		branchCommitID, err := c.Repo.GitRepo.BranchCommitID(branchName)
 		if err != nil {
@@ -142,10 +153,10 @@ func DeleteBranchPost(c *context.Context) {
 		return
 	}
 
-	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &api.DeletePayload{
+	if err := database.PrepareWebhooks(c.Repo.Repository, database.HookEventTypeDelete, &apiv1types.WebhookDeletePayload{
 		Ref:        branchName,
 		RefType:    "branch",
-		PusherType: api.PUSHER_TYPE_USER,
+		PusherType: apiv1types.WebhookPusherTypeUser,
 		Repo:       c.Repo.Repository.APIFormatLegacy(nil),
 		Sender:     c.User.APIFormat(),
 	}); err != nil {

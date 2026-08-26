@@ -1,7 +1,3 @@
-// Copyright 2022 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package database
 
 import (
@@ -11,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"gogs.io/gogs/internal/dbutil"
+	"gogs.io/gogs/internal/dbx"
 )
 
 func TestOrgs(t *testing.T) {
@@ -59,7 +55,7 @@ func orgsList(t *testing.T, ctx context.Context, s *OrganizationsStore) {
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)
@@ -124,7 +120,7 @@ func organizationsSearchByName(t *testing.T, ctx context.Context, s *Organizatio
 	org2, err := usersStore.Create(ctx, "org2", "org2@example.com", CreateUserOptions{FullName: "Acme Corp 2"})
 	require.NoError(t, err)
 	err = s.db.Exec(
-		dbutil.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
+		dbx.Quote("UPDATE %s SET type = ? WHERE id IN (?, ?)", "user"),
 		UserTypeOrganization, org1.ID, org2.ID,
 	).Error
 	require.NoError(t, err)

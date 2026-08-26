@@ -1,7 +1,3 @@
-// Copyright 2020 The Gogs Authors. All rights reserved.
-// Use of this source code is governed by a MIT-style
-// license that can be found in the LICENSE file.
-
 package conf
 
 import (
@@ -11,7 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"gogs.io/gogs/internal/testutil"
+	"gogs.io/gogs/internal/testx"
 )
 
 func TestIsProdMode(t *testing.T) {
@@ -40,7 +36,7 @@ func TestIsProdMode(t *testing.T) {
 }
 
 func TestWorkDirHelper(_ *testing.T) {
-	if !testutil.WantHelperProcess() {
+	if !testx.WantHelperProcess() {
 		return
 	}
 
@@ -57,7 +53,7 @@ func TestWorkDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			out, err := testutil.Exec("TestWorkDirHelper", test.env)
+			out, err := testx.Exec("TestWorkDirHelper", test.env)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -68,7 +64,7 @@ func TestWorkDir(t *testing.T) {
 }
 
 func TestCustomDirHelper(_ *testing.T) {
-	if !testutil.WantHelperProcess() {
+	if !testx.WantHelperProcess() {
 		return
 	}
 
@@ -85,7 +81,7 @@ func TestCustomDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			out, err := testutil.Exec("TestCustomDirHelper", test.env)
+			out, err := testx.Exec("TestCustomDirHelper", test.env)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -96,7 +92,7 @@ func TestCustomDir(t *testing.T) {
 }
 
 func TestHomeDirHelper(_ *testing.T) {
-	if !testutil.WantHelperProcess() {
+	if !testx.WantHelperProcess() {
 		return
 	}
 
@@ -115,7 +111,7 @@ func TestHomeDir(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			out, err := testutil.Exec("TestHomeDirHelper", test.envs...)
+			out, err := testx.Exec("TestHomeDirHelper", test.envs...)
 			if err != nil {
 				t.Fatal(err)
 			}
